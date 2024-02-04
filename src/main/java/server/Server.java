@@ -1,17 +1,18 @@
 package server;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import com.google.gson.Gson;
+import dto.TransferData;
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
 public class Server {
+   static ArrayList<Socket> sockets = new ArrayList<>();
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket=new ServerSocket(5664);
-        ArrayList<Socket> sockets = new ArrayList<>();
+        ServerSocket serverSocket=new ServerSocket(5684);
+
         while (true){
             System.out.println("Listing...!");
             Socket accept = serverSocket.accept();//stop thread
@@ -28,6 +29,8 @@ public class Server {
                         String line= "";
                         while ((line = bufferedReader.readLine()) !=null){
                             System.out.println(line);
+                            TransferData transferData = new Gson().fromJson(line, TransferData.class);
+                            manageTransferData(transferData,accept);
 
                         }
 
@@ -41,8 +44,34 @@ public class Server {
             ob.start();
 
 
-
         }
-    }
+      }
+      public synchronized  static  void manageTransferData(TransferData data,Socket recvide){
+        if (data.getCommand().equals("TXT_MSG")){
+            if (data.getTo().equals("ALL")){
+                fowrdMessageToAll(recvide,data.getMsg());
+            }
+        }
+
+      }
+
+      //synchronized --> threads gdk ekama method eka use krnkota prshna adu krna
+      public synchronized static void fowrdMessageToAll(Socket recve,String msg){
+          for (Socket socket : sockets) {
+              if (socket.getPort()==recve.getPort()){
+                  continue;
+              }
+              try {
+                  PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
+                  out.println(msg);
+              }catch (IOException e){
+                  e.printStackTrace();
+              }
+
+          }
+      }
+
+
+
     }
 
